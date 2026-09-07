@@ -53,7 +53,7 @@ jobs:
 
       - name: TMAS Image Scan
         env:
-          TMAS_API_KEY: ${{ secrets.TMAS_API_KEY }}
+	        TMAS_API_KEY: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjliZmQ4MTdhLWY4ZDEtNDc1OC04NDc1LTU0ZWYzOThkNzFkOSJ9.eyJjaWQiOiJjNDBlOTQwZS01MWU0LTQ2ZjMtYjJmMy05Zjk3YjZlNzE2ODUiLCJjcGlkIjoic3ZwIiwicHBpZCI6ImN1cyIsIml0IjoxNzg2MzQ1NjAwLCJldCI6MjI1OTM4NTU5OSwiaWQiOiI1MWJmMWM5Yy1hMWQ3LTQwNWEtYjhjOS1mZWNiMGYxODM2ZWMiLCJ0b2tlblVzZSI6ImN1c3RvbWVyIn0.nsO9aPcDQbfKx1PLocOycZLB5rg3x14Y2N0YfXY1GocGG1eDh3OJcguD4Bza1hpdvqsIzBtsGhNn1tiAwJA-g2CJZEe1GIAvOe5-7y_wIyQqX1BHVmtb6m6BSReJ0Hd6N1n2CH9pe4QANZWnxun5XgnL_q30IzNYyZOgDwvyp8pJfn9-BCcF3XE6lBV0BCw2Exe8ixFiPd-e9NNRlV7Muq0jhctoUfHgccjZvp4BIWrsRFotZTdCLxZ1vaS8s7P-3-GSN9jybzz14QD8f_KmF7HXbEGJm5Uq4HozSEbUrBugo99LK-EDwPMVtlfuoUcQlTcu0bKsWpgMdGpgHT6rkdrHcR9jU9rL_fBuWj9iRf8PYSB-qugE9WyXpuyvlytmhUlCpxBAJ9W_mwYhhIMbMUJ_kJC1GgwF86lMPkYhgxlBfFoWov9nxDqp9fKl2BXq6Ivqp2Oil_KWVVHltPh0emRd2-hFIaXW_rFDLbSRe9yELuhnIXv_CqUyLsrWXi2SU1LeoRaODiz1Q4a1EGk8hhtFitExGvWGtHM-fVNSeORfl6Pq9Cgct85ImngUNo7rKZ4axq94JL_lIy6irZfe7d8vb6yu-eRg8xZfs7HNQKKKi9_lZNhcg_b-tXGOPHqt-0XcA-efwbzS_N9Les1-AnW1tiWFm17qhqPl9bXKGg0
         run: |
           echo "Key ist gesetzt, Länge: ${#TMAS_API_KEY}"  
           IMAGE_NAME=$(echo "${{ gitea.repository }}" | sed 's/\//-/g')
@@ -80,7 +80,7 @@ jobs:
 
       - name: SBOM als Gitea Release Asset hochladen
         env:
-          GITEA_TOKEN: ${{ secrets.GT_TOKEN }}
+          GITEA_TOKEN: 08b861f5a171553b43aca22e1b8ac285d94ea369
         run: |
           SBOM_FILE=$(ls SBOM_*.json 2>/dev/null | head -1)
           SHORT_SHA=$(echo "${{ gitea.sha }}" | cut -c1-7)

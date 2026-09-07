@@ -1,0 +1,115 @@
+name: Build & Scan Filebrowser
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Debug Workspace
+        run: find / -name "Dockerfile" 2>/dev/null | head -10
+      - name: Build Image mit Kaniko
+        uses: docker://gcr.io/kaniko-project/executor:latest
+        with:
+          args: |
+            --context=dir:///tmp/act_runner/workdir/${{ gitea.repository }}
+            --dockerfile=/tmp/act_runner/workdir/${{ gitea.repository }}/Dockerfile
+            --destination=registry:5000/${{ gitea.repository }}:${{ gitea.sha }}
+            --destination=registry:5000/${{ gitea.repository }}:latest
+            --insecure
+            --skip-tls-verify
+            
+  tmas-scan:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install curl und jq
+        run: |
+          apt-get update -qq && apt-get install -y -qq curl jq
+
+      - name: Install TMAS CLI
+        run: |
+          curl -s https://cli.artifactscan.cloudone.trendmicro.com/tmas-cli/latest/tmas-cli_Linux_x86_64.tar.gz \
+            | tar xz -C /usr/local/bin tmas
+          tmas version
+      
+      - name: TMAS Help
+        run: tmas scan --help
+          
+      - name: Pull Image via skopeo
+        run: |
+          apt-get update -qq && apt-get install -y -qq skopeo
+          IMAGE_NAME=$(echo "${{ gitea.repository }}" | sed 's/\//-/g')
+          skopeo copy \
+            --insecure-policy \
+            --src-tls-verify=false \
+            docker://registry:5000/${{ gitea.repository }}:latest \
+            oci-archive:/tmp/${IMAGE_NAME}.tar
+          ls -lh /tmp/${IMAGE_NAME}.tar
+
+      - name: TMAS Image Scan
+        env:
+          TMAS_API_KEY: ${{ secrets.TMAS_API_KEY }}
+        run: |
+          echo "Key ist gesetzt, Länge: ${#TMAS_API_KEY}"  
+          IMAGE_NAME=$(echo "${{ gitea.repository }}" | sed 's/\//-/g')
+          echo "Scanning: /tmp/${IMAGE_NAME}.tar"
+          ls -lh /tmp/${IMAGE_NAME}.tar
+          tmas scan oci-archive:/tmp/${IMAGE_NAME}.tar \
+            --region eu-central-1 \
+            --vulnerabilities \
+            --malware \
+            --secrets \
+            --saveSBOM \
+            --output json=tmas-report.json
+
+      - name: SBOM und Report anzeigen
+        run: |
+          echo "=== SBOM ==="
+          SBOM_FILE=$(ls SBOM_*.json 2>/dev/null | head -1)
+          if [ -n "$SBOM_FILE" ]; then
+            echo "Dateigrösse: $(wc -c < $SBOM_FILE) bytes"
+            cat "$SBOM_FILE"
+          else
+            echo "Kein SBOM gefunden"
+          fi
+
+      - name: SBOM als Gitea Release Asset hochladen
+        env:
+          GITEA_TOKEN: ${{ secrets.GT_TOKEN }}
+        run: |
+          SBOM_FILE=$(ls SBOM_*.json 2>/dev/null | head -1)
+          SHORT_SHA=$(echo "${{ gitea.sha }}" | cut -c1-7)
+          RELEASE_TAG="sbom-${SHORT_SHA}"
+          REPO="${{ gitea.repository }}"
+          GITEA_INTERNAL="http://gitea:3000"    # für API-Calls intern
+          GITEA_EXTERNAL="http://localhost:3000" # für Links nach aussen
+
+          # Release erstellen
+          RELEASE_ID=$(curl -s -X POST \
+            -H "Authorization: token ${GITEA_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "${GITEA_INTERNAL}/api/v1/repos/${REPO}/releases" \
+            -d "{
+              \"tag_name\": \"${RELEASE_TAG}\",
+              \"name\": \"SBOM ${SHORT_SHA}\",
+              \"body\": \"Automatisch generiertes SBOM für commit ${SHORT_SHA}\",
+              \"draft\": false,
+              \"prerelease\": true
+            }" | jq -r '.id')
+
+          echo "Release ID: ${RELEASE_ID}"
+
+          # SBOM als Asset anhängen
+          curl -s -X POST \
+            -H "Authorization: token ${GITEA_TOKEN}" \
+            -H "Content-Type: application/octet-stream" \
+            "${GITEA_INTERNAL}/api/v1/repos/${REPO}/releases/${RELEASE_ID}/assets?name=sbom-${SHORT_SHA}.json" \
+            --data-binary @"${SBOM_FILE}"
+
+          echo "SBOM hochgeladen: sbom-${SHORT_SHA}.json"
+          echo "Download: ${GITEA_EXTERNAL}/${REPO}/releases/tag/${RELEASE_TAG}"

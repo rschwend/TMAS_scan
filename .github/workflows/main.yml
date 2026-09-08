@@ -23,4 +23,4 @@ jobs:
           artifact: dir:./repo-name
           additionalArgs: --region=eu-central-1
           tmasApiKey: ${{ secrets.TMAS_API_KEY }}
-          githubToken: ${{ secrets.GH_TOKEN }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}

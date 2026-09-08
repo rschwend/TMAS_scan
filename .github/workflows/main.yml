@@ -18,7 +18,7 @@ jobs:
         with:
           version: '2' # Recommended: pin to major version for automatic updates within v2.x.x
           vulnerabilitiesScan: true
-          malwareScan: true # Malware scanning is only available for container images at this time
+          malwareScan: false # Malware scanning is only available for container images at this time
           secretsScan: true
           artifact: dir:./repo-name
           additionalArgs: --region=eu-central-1

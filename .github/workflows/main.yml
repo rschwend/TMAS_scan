@@ -16,6 +16,9 @@ jobs:
         with:
           path: repo-name
 
+      - name: Build image
+        run: docker build --tag my-nginx:ci ./repo-name
+
       - name: Download TMAS and Scan Repo for Open Source Vulnerabilities and Secrets
         uses: trendmicro/tmas-scan-action@v3.3.0
         with:
@@ -23,7 +26,7 @@ jobs:
           vulnerabilitiesScan: true
           malwareScan: false # Malware scanning is only available for container images at this time
           secretsScan: true
-          artifact: dir:./repo-name
+          artifact: 'docker:my-nginx:ci'
           additionalArgs: --region=eu-central-1
           tmasApiKey: ${{ secrets.TMAS_API_KEY }}
           githubToken: ${{ secrets.GITHUB_TOKEN }}

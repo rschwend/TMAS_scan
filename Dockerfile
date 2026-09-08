@@ -1,3 +1,3 @@
 FROM nginx:trixie-perl
 
-LABEL maintainer="Raph_05"
+LABEL maintainer="Raph_06"
